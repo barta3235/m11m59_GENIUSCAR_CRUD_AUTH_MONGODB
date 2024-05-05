@@ -49,7 +49,7 @@ async function run() {
         const query = {_id: new ObjectId(id)};
 
         const options={
-            projection: {title:1,price:1,service_id:1}
+            projection: {title:1,price:1,service_id:1,img:1}
         }
 
 
@@ -62,10 +62,26 @@ async function run() {
     // check out or bookings collection
 
     app.get('/bookings', async(req,res)=>{
-        const cursor= bookingCollection.find()
-        const result= await cursor.toArray()
+        console.log('In server:',req.query.email);
+        let query={};
+        if(req.query?.email){
+          query={Email: req.query?.email}
+          console.log('query:',query)
+        }
+        const result= await bookingCollection.find(query).toArray()
+        console.log(result)
         res.send(result)
     })
+
+    app.delete('/bookings/:id', async(req,res)=>{
+      const id=req.params.id;
+      const query={_id: new ObjectId(id)}
+      const result =await bookingCollection.deleteOne(query)
+      res.send(result)
+    })
+   
+
+
     app.post('/bookings', async(req,res)=>{
         const booking= req.body;
         console.log(booking);
