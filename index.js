@@ -10,6 +10,7 @@ const port= process.env.PORT || 5000
 
 
 
+
 //middleware
 app.use(cors({
   origin: ['http://localhost:5173'],
@@ -18,6 +19,32 @@ app.use(cors({
 app.use(express.json())
 app.use(cookieParser())
 
+
+const logger = async(req,res,next)=>{
+  console.log('Called',req.host , req.originalURL)
+  next();
+}
+
+const verifyToken= async(req,res,next)=>{
+     const token= req.cookies?.token
+     console.log('in veryfy token',token)
+     console.log('Value fo token in middleware,',token)
+     if(!token){
+        return res.send({message:'Not authorized'})
+     }
+     jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+           //error
+          if(err){
+            return res.status(401).send({message: 'Not Authorized'})
+          }
+
+
+           //if token valid then it will be decoded
+           console.log('value in the token',decoded)
+           req.user=decoded
+           next()
+     })
+}
 
 
 
@@ -46,7 +73,7 @@ async function run() {
 
 
     //auth related API
-    app.post('/jwt',async(req,res)=>{
+    app.post('/jwt',verifyToken,async(req,res)=>{
          const user= req.body;
          console.log(user)
          const token= jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'});
@@ -85,9 +112,13 @@ async function run() {
 
     // check out or bookings collection
 
-    app.get('/bookings', async(req,res)=>{
-        console.log('In server:',req.query.email);
+    app.get('/bookings',verifyToken ,async(req,res)=>{
+        console.log('In server:',req.query?.email);
         console.log('tok tok token',req.cookies.token);
+        console.log('User in the valid token',req.user)
+        if(req.query?.email!== req.user.email){
+          return res.status(403).send({message:'Forbidden access'})
+        }
         let query={};
         if(req.query?.email){
           query={Email: req.query?.email}
